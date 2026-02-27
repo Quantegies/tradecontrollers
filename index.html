@@ -831,7 +831,7 @@
     </div>
   </section>
 
-  <!-- FOOTER (UPDATED WITH NINJATRADER PAGE LINK) -->
+<!-- FOOTER (RISK DISCLOSURE AS SCROLLABLE MODAL) -->
 <footer class="py-12 border-t border-slate-200 bg-white">
   <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
 
@@ -842,7 +842,6 @@
 
     <!-- Footer Links -->
     <div class="flex flex-wrap items-center gap-6 text-sm font-semibold text-slate-700">
-
       <a href="ninja.html"
          class="hover:text-slate-900 transition underline underline-offset-4">
         NinjaTrader Platform
@@ -853,20 +852,192 @@
         Kinetick Market Data
       </a>
 
+      <!-- Risk Disclosure trigger -->
+      <button
+        type="button"
+        id="openRiskModal"
+        class="hover:text-slate-900 transition underline underline-offset-4"
+        aria-haspopup="dialog"
+        aria-controls="riskDisclosureModal">
+        Risk Disclosure
+      </button>
     </div>
 
-    <!-- Legal -->
+    <!-- Legal (short) -->
     <div class="text-xs text-slate-500 max-w-md">
       TradeControllers is an independent product and is not affiliated with or endorsed by
-      NinjaTrader or Tradovate. Trading involves risk. Risk Disclosure: Futures and forex trading contains substantial risk and is not for every investor. An investor could potentially lose all or more than the initial investment. Risk capital is money that can be lost without jeopardizing one’s financial security or lifestyle. Only risk capital should be used for trading and only those with sufficient risk capital should consider trading. Past performance is not necessarily indicative of future results. 
-Hypothetical Performance Disclosure: Hypothetical performance results have many inherent limitations, some of which are described below. No representation is being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any particular trading program. One of the limitations of hypothetical performance results is that they are generally prepared with the benefit of hindsight. In addition, hypothetical trading does not involve financial risk, and no hypothetical trading record can completely account for the impact of financial risk of actual trading. for example, the ability to withstand losses or to adhere to a particular trading program despite trading losses are material points that can also adversely affect actual trading results. There are numerous other factors related to the markets in general or to the implementation of any specific trading program that cannot be fully accounted for in the preparation of hypothetical performance results and all which can adversely affect trading results. 
-Testimonials Disclosure: Testimonials appearing on this website may not be representative of other clients or customers and are not a guarantee of future performance or success. Live Trade Room Example: This presentation is for educational purposes only and the opinions expressed are those of the presenter only. All trades presented should be considered hypothetical and should not be expected to be replicated in a live trading account. 
-Virtual Currency: View CFTC advisories as they contain more information on the risks associated with trading virtual currencies.
-
+      NinjaTrader or Tradovate. Trading involves risk.
     </div>
 
   </div>
 </footer>
+
+<!-- RISK DISCLOSURE MODAL -->
+<div
+  id="riskDisclosureModal"
+  class="fixed inset-0 z-[999] hidden"
+  aria-hidden="true">
+
+  <!-- Backdrop -->
+  <div
+    id="riskModalBackdrop"
+    class="absolute inset-0 bg-black/50"></div>
+
+  <!-- Dialog -->
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="riskModalTitle"
+      class="w-full max-w-3xl rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200">
+        <div class="min-w-0">
+          <h2 id="riskModalTitle" class="text-sm font-semibold text-slate-900">
+            Risk Disclosure
+          </h2>
+          <p class="text-xs text-slate-500">
+            Scroll to read. Press Esc or click outside to close.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          id="closeRiskModal"
+          class="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition"
+          aria-label="Close risk disclosure">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+
+      <!-- Body (scrollable) -->
+      <div class="px-5 py-4 max-h-[70vh] overflow-y-auto text-xs leading-5 text-slate-600">
+        <p class="mb-3">
+          Futures and forex trading contains substantial risk and is not for every investor. An investor could potentially lose all
+          or more than the initial investment. Risk capital is money that can be lost without jeopardizing one’s financial security
+          or lifestyle. Only risk capital should be used for trading and only those with sufficient risk capital should consider
+          trading. Past performance is not necessarily indicative of future results.
+        </p>
+
+        <p class="mb-3 font-semibold text-slate-700">Hypothetical Performance Disclosure:</p>
+        <p class="mb-3">
+          Hypothetical performance results have many inherent limitations, some of which are described below. No representation is
+          being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are
+          frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any
+          particular trading program. One of the limitations of hypothetical performance results is that they are generally prepared
+          with the benefit of hindsight. In addition, hypothetical trading does not involve financial risk, and no hypothetical trading
+          record can completely account for the impact of financial risk of actual trading. For example, the ability to withstand losses
+          or to adhere to a particular trading program despite trading losses are material points that can also adversely affect actual
+          trading results. There are numerous other factors related to the markets in general or to the implementation of any specific
+          trading program that cannot be fully accounted for in the preparation of hypothetical performance results and all which can
+          adversely affect trading results.
+        </p>
+
+        <p class="mb-3 font-semibold text-slate-700">Testimonials Disclosure:</p>
+        <p class="mb-3">
+          Testimonials appearing on this website may not be representative of other clients or customers and are not a guarantee of
+          future performance or success.
+        </p>
+
+        <p class="mb-3 font-semibold text-slate-700">Live Trade Room Example:</p>
+        <p class="mb-3">
+          This presentation is for educational purposes only and the opinions expressed are those of the presenter only. All trades
+          presented should be considered hypothetical and should not be expected to be replicated in a live trading account.
+        </p>
+
+        <p class="mb-3 font-semibold text-slate-700">Virtual Currency:</p>
+        <p class="mb-1">
+          View CFTC advisories as they contain more information on the risks associated with trading virtual currencies.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-5 py-4 border-t border-slate-200 flex items-center justify-end">
+        <button
+          type="button"
+          id="ackRiskModal"
+          class="h-10 px-4 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById("riskDisclosureModal");
+    const openBtn = document.getElementById("openRiskModal");
+    const closeBtn = document.getElementById("closeRiskModal");
+    const ackBtn = document.getElementById("ackRiskModal");
+    const backdrop = document.getElementById("riskModalBackdrop");
+
+    let lastFocusedEl = null;
+
+    function openModal() {
+      lastFocusedEl = document.activeElement;
+      modal.classList.remove("hidden");
+      modal.setAttribute("aria-hidden", "false");
+
+      // focus close button for accessibility
+      setTimeout(() => closeBtn.focus(), 0);
+
+      // prevent background scroll
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      modal.setAttribute("aria-hidden", "true");
+
+      // restore background scroll
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+
+      // restore focus
+      if (lastFocusedEl && typeof lastFocusedEl.focus === "function") {
+        lastFocusedEl.focus();
+      }
+    }
+
+    openBtn.addEventListener("click", openModal);
+    closeBtn.addEventListener("click", closeModal);
+    ackBtn.addEventListener("click", closeModal);
+
+    // click outside closes
+    backdrop.addEventListener("click", closeModal);
+
+    // ESC closes
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+        closeModal();
+      }
+    });
+
+    // basic focus trap (Tab stays within modal)
+    modal.addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      const focusable = modal.querySelectorAll(
+        'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+  })();
+</script>
 
   <script>
     // Mobile menu
@@ -889,6 +1060,7 @@ Virtual Currency: View CFTC advisories as they contain more information on the r
   </script>
 </body>
 </html>
+
 
 
 
