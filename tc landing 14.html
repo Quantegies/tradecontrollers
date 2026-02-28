@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradeControllers | Digital Risk Keypad for Traders</title>
+  <meta name="description" content="TradeControllers is a digital risk keypad that helps traders execute the intended idea—without accidental clicks. Brackets, risk presets, lockout, and overtrading protection. Works with prop firms using Tradovate and NinjaTrader." />
+  <link rel="icon" type="image/png" href="/tclogo2.png" />
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- AOS -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet" />
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Plus Jakarta Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"],
+          },
+          boxShadow: {
+            soft: "0 14px 50px rgba(0,0,0,.35)",
+            card: "0 28px 90px rgba(0,0,0,.45)",
+          }
+        },
+      },
+    };
+  </script>
+
+  <style>
+    :root{
+      --bg0: 3,6,14;
+      --bg1: 7,10,22;
+      --line: 255,255,255;
+      --ink: 229,231,235;
+      --muted: 148,163,184; /* slate-400-ish */
+      --accent: 59,130,246; /* blue-500 */
+      --accent2: 99,102,241; /* indigo-500 */
+    }
+
+    body{
+      background: radial-gradient(1000px 520px at 50% -10%, rgba(var(--accent),0.18), transparent 60%),
+                  radial-gradient(900px 520px at 20% 20%, rgba(var(--accent2),0.12), transparent 62%),
+                  linear-gradient(180deg, rgb(var(--bg0)) 0%, rgb(var(--bg1)) 100%);
+      color: rgb(var(--ink));
+    }
+
+    /* Subtle grid + vignette like the reference */
+    .bg-grid{
+      position: fixed;
+      inset:0;
+      z-index:-3;
+      pointer-events:none;
+      background-image:
+        linear-gradient(to right, rgba(var(--line),0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(var(--line),0.07) 1px, transparent 1px);
+      background-size: 56px 56px;
+      opacity: .45;
+      mask-image: radial-gradient(circle at 50% 20%, black 35%, transparent 70%);
+      -webkit-mask-image: radial-gradient(circle at 50% 20%, black 35%, transparent 70%);
+    }
+    .vignette{
+      position: fixed;
+      inset:0;
+      z-index:-2;
+      pointer-events:none;
+      background: radial-gradient(circle at 50% 18%, rgba(255,255,255,0.06), rgba(0,0,0,0.55) 70%);
+      opacity: .9;
+    }
+
+    /* Glass surfaces (dark) */
+    .glass{
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .glass-strong{
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .hairline{
+      border-color: rgba(255,255,255,0.10);
+    }
+
+    /* CTA button (minimal, not gradienty) */
+    .btn-primary{
+      background: rgb(var(--accent));
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 18px 55px rgba(59,130,246,.28);
+      transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+    }
+    .btn-primary:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+      box-shadow: 0 22px 68px rgba(59,130,246,.32);
+    }
+    .btn-secondary{
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .btn-secondary:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .muted{ color: rgba(var(--muted),1); }
+    .kicker{
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      font-weight: 800;
+      font-size: .72rem;
+      color: rgba(var(--muted),1);
+    }
+
+    .card-hover{
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
+    }
+    .card-hover:hover{
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.18);
+      box-shadow: 0 26px 90px rgba(0,0,0,.55);
+      background: rgba(255,255,255,0.085);
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      html{ scroll-behavior:auto; }
+      *{ transition:none !important; animation:none !important; }
+    }
+  </style>
+</head>
+
+<body class="font-sans">
+  <div class="bg-grid"></div>
+  <div class="vignette"></div>
+
+  <!-- NAV (new: minimal, centered links, dark) -->
+  <header class="sticky top-0 z-50">
+    <nav id="navBar" class="bg-black/30 backdrop-blur-md border-b hairline">
+      <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="#top" class="flex items-center gap-3">
+          <img src="tclogo2.png" alt="TradeControllers" class="h-9 w-auto object-contain" />
+        </a>
+
+        <div class="hidden lg:flex items-center gap-7 text-sm font-semibold text-white/80">
+          <a href="#product" class="hover:text-white transition">Product</a>
+          <a href="#demo" class="hover:text-white transition">Demo</a>
+          <a href="#features" class="hover:text-white transition">Risk Functions</a>
+          <a href="#compat" class="hover:text-white transition">Compatibility</a>
+          <a href="#pricing" class="hover:text-white transition">Pricing</a>
+          <a href="#faq" class="hover:text-white transition">FAQ</a>
+        </div>
+
+        <div class="hidden lg:flex items-center gap-3">
+          <a href="https://discord.gg/6kdAcPUG8N" target="_blank" rel="noopener noreferrer"
+             class="btn-secondary px-4 py-2 rounded-xl text-white font-semibold">
+            Discord
+          </a>
+          <a href="https://whop.com/tradecontrollers-5f93/tradecontrollers-97/" target="_blank" rel="noopener noreferrer"
+             class="btn-primary px-4 py-2 rounded-xl text-white font-extrabold">
+            Get Access
+          </a>
+        </div>
+
+        <button id="menuBtn" class="lg:hidden btn-secondary p-3 rounded-xl" aria-label="Open menu">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div id="mobileMenu" class="hidden lg:hidden border-t hairline bg-black/35">
+        <div class="max-w-7xl mx-auto px-6 py-5 flex flex-col gap-4 text-sm font-semibold text-white/80">
+          <a href="#product" class="hover:text-white">Product</a>
+          <a href="#demo" class="hover:text-white">Demo</a>
+          <a href="#features" class="hover:text-white">Risk Functions</a>
+          <a href="#compat" class="hover:text-white">Compatibility</a>
+          <a href="#pricing" class="hover:text-white">Pricing</a>
+          <a href="#faq" class="hover:text-white">FAQ</a>
+
+          <a href="https://whop.com/tradecontrollers-5f93/tradecontrollers-97/" target="_blank" rel="noopener noreferrer"
+             class="btn-primary mt-2 px-5 py-3 rounded-xl text-center text-white font-extrabold">
+            Get Access
+          </a>
+          <a href="https://discord.gg/6kdAcPUG8N" target="_blank" rel="noopener noreferrer"
+             class="btn-secondary px-5 py-3 rounded-xl text-center text-white font-semibold">
+            Discord
+          </a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+<!-- HERO -->
+<section id="top" class="relative">
+  <div class="max-w-7xl mx-auto px-6 pt-14 pb-10 lg:pt-20 lg:pb-16">
+    <div class="flex flex-col items-center text-center" data-aos="fade-up">
+
+      <!-- Top pill -->
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-xs font-extrabold text-white/80">
+        <span class="w-2 h-2 rounded-full" style="background: rgba(var(--accent),1);"></span>
+        Tradovate + NinjaTrader • prop-ready execution layer
+        <a href="#pricing" class="ml-1 underline underline-offset-4 text-white/90 hover:text-white">
+          View pricing →
+        </a>
+      </div>
+
+      <!-- Headline -->
+      <h1 class="mt-8 text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.05] max-w-4xl">
+        Execute the idea you intended<br class="hidden sm:block" />
+        not the click you end up regretting.
+      </h1>
+
+      <!-- Subtext -->
+      <p class="mt-6 text-lg muted leading-relaxed max-w-2xl">
+        Tradecontrollers is a digital risk keypad that makes high-stress actions consistent:
+        presets, bracket controls, one-tap management, and lockout protection to prevent overtrading.
+      </p>
+
+      <!-- Buttons -->
+      <div class="mt-9 flex flex-col sm:flex-row gap-3">
+        <a href="https://whop.com/tradecontrollers-5f93/tradecontrollers-97/"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="btn-primary px-7 py-4 rounded-2xl text-white font-extrabold">
+          Get Access
+        </a>
+
+        <a href="#demo"
+           class="btn-secondary px-7 py-4 rounded-2xl text-white font-extrabold">
+          Watch demo
+        </a>
+      </div>
+<!-- HERO IMAGE WITH UI SHELL AROUND IT -->
+<div class="mt-14 w-full max-w-5xl" data-aos="fade-up" data-aos-delay="120">
+  <div class="relative noise">
+
+    <!-- subtle dark glow (not rainbow) -->
+    <div
+      class="absolute -inset-6 rounded-[2.5rem] blur-2xl opacity-60"
+      style="background: radial-gradient(800px 400px at 50% 20%, rgba(var(--accent),0.25), transparent 60%);">
+    </div>
+
+    <div class="relative glass-strong rounded-[2rem] p-6 shadow-card border hairline">
+
+      <!-- Top UI Bar -->
+      <div class="flex items-center justify-between gap-3 mb-5">
+        <div class="flex items-center gap-2">
+         <span class="relative flex h-2.5 w-2.5">
+  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+</span>
+
+          <span class="px-3 py-1.5 rounded-xl glass border hairline text-xs font-mono text-white/80">
+            Ticker
+          </span>
+
+          <span class="hidden sm:inline-flex px-3 py-1.5 rounded-xl glass border hairline text-xs font-mono text-white/70">
+            Account Name
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span
+            class="px-3 py-1.5 rounded-xl text-white text-xs font-extrabold"
+            style="background: rgba(var(--accent),1);">
+            Tradovate connected
+          </span>
+
+          <button
+            class="w-8 h-8 rounded-xl glass border hairline flex items-center justify-center"
+            aria-label="Close preview">
+            <svg class="w-4 h-4 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M6 6l12 12M18 6l-12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Image Frame -->
+      <div class="rounded-[1.8rem] overflow-hidden border hairline bg-black/30">
+        <img
+          src="tccontroller1.png"
+          alt="TradeControllers controller preview"
+          class="w-full h-auto object-contain"
+        />
+      </div>
+
+    </div>
+  </div>
+</div>
+
+      <!-- Trusted strip -->
+      <div class="mt-14 w-full max-w-5xl glass rounded-2xl p-6 border hairline"
+           data-aos="fade-up"
+           data-aos-delay="150">
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center text-left">
+          <div class="md:col-span-4">
+            <div class="kicker">Compatible with common prop workflows</div>
+            <div class="mt-2 text-white/90 font-semibold">
+              Works where prop traders execute: Tradovate and NinjaTrader environments.
+            </div>
+          </div>
+
+          <div class="md:col-span-8 flex flex-wrap gap-2">
+            <span class="px-3 py-2 rounded-xl glass text-xs font-mono text-white/85 border hairline">
+              APEX Trader Funding
+            </span>
+            <span class="px-3 py-2 rounded-xl glass text-xs font-mono text-white/85 border hairline">
+              Blusky
+            </span>
+            <span class="px-3 py-2 rounded-xl glass text-xs font-mono text-white/85 border hairline">
+              Purdia
+            </span>
+            <span class="px-3 py-2 rounded-xl glass text-xs font-mono text-white/85 border hairline">
+              Tradeify
+            </span>
+            <span class="px-3 py-2 rounded-xl glass text-xs font-mono text-white/85 border hairline">
+              and more
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</section>
+
+  <!-- PRODUCT (new: clean blocks, no big gradients) -->
+  <section id="product" class="py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="max-w-3xl" data-aos="fade-up">
+        <div class="kicker">Product</div>
+        <h2 class="mt-3 text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          Built for execution. Not aesthetics.
+        </h2>
+        <p class="mt-4 muted text-lg leading-relaxed">
+          Tradecontrollers puts your highest risk actions behind deliberate, consistent buttons: defaults, cancels, brackets, partials, and lockout, this way you may perform more consistently in challenges and potentially take payouts!
+        </p>
+      </div>
+<!-- Replace your current 3-card block with this (same icons/layout, adapted to DARK THEME) -->
+<div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+  <!-- Card 1 -->
+  <div class="glass rounded-2xl p-6 border hairline shadow-soft card-hover" data-aos="fade-up">
+    <div class="w-12 h-12 rounded-2xl glass border hairline flex items-center justify-center">
+      <svg class="w-6 h-6 text-white/85" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+    <h3 class="mt-4 text-white font-extrabold">Intent first workflow</h3>
+    <p class="mt-2 muted text-sm leading-relaxed">
+      Reduce accidental clicks by moving critical actions into a repeatable keypad layout.
+    </p>
+  </div>
+
+  <!-- Card 2 -->
+  <div class="glass rounded-2xl p-6 border hairline shadow-soft card-hover" data-aos="fade-up" data-aos-delay="70">
+    <div class="w-12 h-12 rounded-2xl glass border hairline flex items-center justify-center">
+      <svg class="w-6 h-6 text-white/85" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-8.02 14A2 2 0 004 21h16a2 2 0 001.73-3.14l-8.02-14a2 2 0 00-3.46 0z"/>
+      </svg>
+    </div>
+    <h3 class="mt-4 text-white font-extrabold">Risk guardrails</h3>
+    <p class="mt-2 muted text-sm leading-relaxed">
+      Defaults for SL/TP, bracket controls, and “safe” actions that keep you inside your plan.
+    </p>
+  </div>
+
+  <!-- Card 3 -->
+  <div class="glass rounded-2xl p-6 border hairline shadow-soft card-hover" data-aos="fade-up" data-aos-delay="140">
+    <div class="w-12 h-12 rounded-2xl glass border hairline flex items-center justify-center">
+      <svg class="w-6 h-6 text-white/85" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm6 10H6a4 4 0 014-4h4a4 4 0 014 4z"/>
+      </svg>
+    </div>
+    <h3 class="mt-4 text-white font-extrabold">Overtrading lockout</h3>
+    <p class="mt-2 muted text-sm leading-relaxed">
+      Trigger a lockout after defined events (loss streaks, max daily risk, time windows, profit goal) to stop revenge trading and protect payouts.
+    </p>
+  </div>
+</div>
+  </section>
+
+  <!-- DEMO -->
+  <section id="demo" class="py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        <div class="lg:col-span-5" data-aos="fade-up">
+          <div class="kicker">Demo</div>
+          <h2 class="mt-3 text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            See the full workflow.
+          </h2>
+          <p class="mt-4 muted text-lg leading-relaxed">
+            A quick look at keypad execution, risk presets, bracket management, and lockout behavior.
+          </p>
+
+          <div class="mt-7 space-y-3">
+            <div class="glass rounded-2xl p-4 border hairline">
+              <div class="text-white font-extrabold">Preset → Execute</div>
+              <div class="text-sm muted mt-1">Default protection applied immediately.</div>
+            </div>
+            <div class="glass rounded-2xl p-4 border hairline">
+              <div class="text-white font-extrabold">Manage brackets</div>
+              <div class="text-sm muted mt-1">Cancel TP/SL, partials, BE and trailing actions.</div>
+            </div>
+            <div class="glass rounded-2xl p-4 border hairline">
+              <div class="text-white font-extrabold">Lockout protection</div>
+              <div class="text-sm muted mt-1">Stop trading when your rules say stop.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7" data-aos="fade-up" data-aos-delay="120">
+          <div class="glass-strong rounded-[1.6rem] border hairline overflow-hidden shadow-card">
+            <div class="bg-black/35">
+              <video class="w-full h-auto" controls playsinline preload="metadata" poster="tcdemopic.png">
+                <source src="tcdemo.mp4" type="video/mp4" />
+                <source src="demo.webm" type="video/webm" />
+              </video>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<!-- FEATURES (revamped: no “info cards”, smooth rows + controller photo under the heading) -->
+<section id="features" class="py-20">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+
+      <!-- LEFT -->
+      <div class="lg:col-span-5" data-aos="fade-up">
+        <div class="kicker">Risk Functions</div>
+        <h2 class="mt-3 text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          Every button is a risk decision.
+        </h2>
+        <p class="mt-4 muted text-lg leading-relaxed">
+          Focused on the actions traders repeatedly need under pressure so execution stays controlled.
+        </p>
+
+        <!-- Controller photo (requested: directly under the intro text) -->
+        <div class="mt-7">
+          <div class="rounded-[1.6rem] overflow-hidden border hairline bg-black/25">
+            <img
+              src="tcbuttons.png"
+              alt="TradeControllers controller"
+              class="w-full h-auto"
+            />
+          </div>
+          <div class="mt-2 text-xs text-white/55">
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT (smooth info, not boxed “cards”) -->
+      <div class="lg:col-span-7" data-aos="fade-up" data-aos-delay="120">
+        <div class="space-y-6">
+
+          <!-- Row group -->
+          <div class="border-t hairline pt-6">
+            <div class="flex items-start justify-between gap-6">
+              <div>
+                <div class="text-white font-extrabold text-lg">Execution</div>
+                <div class="mt-1 text-sm muted">Fast, consistent order entry under stress.</div>
+              </div>
+              <div class="hidden sm:flex items-center gap-2">
+               
+              </div>
+            </div>
+
+            <ul class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-8 text-sm text-white/75">
+              <li class="flex gap-2"><span class="text-white/35">•</span>Buy / Sell</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Limit order / Market pending</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Double order</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Reverse / Hedge toggles</li>
+            </ul>
+          </div>
+
+          <div class="border-t hairline pt-6">
+            <div class="flex items-start justify-between gap-6">
+              <div>
+                <div class="text-white font-extrabold text-lg">Risk & Brackets</div>
+                <div class="mt-1 text-sm muted">Default protection + one-tap bracket management.</div>
+              </div>
+              <div class="hidden sm:flex items-center gap-2">
+              
+              </div>
+            </div>
+
+            <ul class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-8 text-sm text-white/75">
+              <li class="flex gap-2"><span class="text-white/35">•</span>Default stoploss / take profit</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Cancel stoploss / cancel take profit</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>SL @ entry / SL in profit</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Partial take profit / target presets</li>
+            </ul>
+          </div>
+
+          <div class="border-t hairline pt-6">
+            <div class="flex items-start justify-between gap-6">
+              <div>
+                <div class="text-white font-extrabold text-lg">Discipline</div>
+                <div class="mt-1 text-sm muted">Rules that prevent overtrading spirals.</div>
+              </div>
+              <div class="hidden sm:flex items-center gap-2">
+              
+              </div>
+            </div>
+
+            <ul class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-8 text-sm text-white/75">
+              <li class="flex gap-2"><span class="text-white/35">•</span>Lockout (manual + rule-based)</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Max leverage / risk caps</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Auto BE / trailing activator</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Close full / half / custom</li>
+            </ul>
+          </div>
+
+          <div class="border-t hairline pt-6">
+            <div class="flex items-start justify-between gap-6">
+              <div>
+                <div class="text-white font-extrabold text-lg">Utility</div>
+                <div class="mt-1 text-sm muted">Fast context so you don’t break your plan.</div>
+              </div>
+              <div class="hidden sm:flex items-center gap-2">
+               
+              </div>
+            </div>
+
+            <ul class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-8 text-sm text-white/75">
+              <li class="flex gap-2"><span class="text-white/35">•</span>Show stats (session feedback)</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Calculator (position sizing)</li>
+              <li class="flex gap-2"><span class="text-white/35">•</span>Change symbol / accounts</li>
+            </ul>
+          </div>
+
+          <!-- Outcome (smooth, not a card) -->
+          <div class="border-t hairline pt-6">
+            <div class="text-white font-extrabold">Outcome</div>
+            <p class="mt-2 text-sm text-white/70 leading-relaxed">
+              When execution is standardized, your edge is evaluated on the trade idea — not avoidable operator error.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+  <!-- COMPATIBILITY -->
+  <section id="compat" class="py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="glass-strong rounded-[1.6rem] border hairline p-8 md:p-10 shadow-soft" data-aos="fade-up">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <div class="lg:col-span-5">
+            <div class="kicker">Compatibility</div>
+            <h2 class="mt-3 text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+              Built for Tradovate & NinjaTrader workflows.
+            </h2>
+            <p class="mt-4 muted text-lg leading-relaxed">
+              Connect → set parameters → execute with guardrails.
+            </p>
+          </div>
+
+          <div class="lg:col-span-7">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="glass rounded-2xl p-5 border hairline">
+                <div class="kicker">Broker</div>
+                <div class="mt-2 text-white font-extrabold">NinjaTrader & Tradovate</div>
+                <div class="mt-2 text-sm muted">Keypad actions mapped to consistent order controls.</div>
+              </div>
+
+              <div class="glass rounded-2xl p-5 border hairline">
+                <div class="kicker">Accounts</div>
+                <div class="mt-2 text-white font-extrabold">Prop + Personal</div>
+                <div class="mt-2 text-sm muted">Same layout across evaluation, funded, and personal live.</div>
+              </div>
+
+              <div class="glass rounded-2xl p-5 border hairline">
+                <div class="kicker">Install</div>
+                <div class="mt-2 text-white font-extrabold">Chrome extension</div>
+                <div class="mt-2 text-sm muted">Works on desktop browsers supporting extensions.</div>
+              </div>
+            </div>
+
+            <div class="mt-5 text-xs text-white/55 leading-relaxed">
+              Tradecontrollers is an independent product and is not affiliated with or endorsed by Tradovate, NinjaTrader, or any prop firms.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center max-w-3xl mx-auto" data-aos="fade-up">
+        <div class="kicker">Pricing</div>
+        <h2 class="mt-3 text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+          One plan. No tiers.
+        </h2>
+        <p class="mt-4 muted text-lg leading-relaxed">One-time access. No feature gating.</p>
+      </div>
+
+      <div class="mt-12 flex justify-center" data-aos="fade-up" data-aos-delay="90">
+        <div class="w-full max-w-2xl glass-strong rounded-[1.6rem] border hairline p-8 md:p-10 shadow-card">
+          <div class="flex items-start justify-between gap-6">
+            <div>
+              <div class="kicker">Early Access</div>
+              <div class="mt-3 text-white font-extrabold text-2xl">Everything included, forever.</div>
+              <div class="mt-2 text-sm muted">For prop traders who want guardrails and consistent execution.</div>
+            </div>
+            <div class="hidden sm:block px-3 py-2 rounded-xl glass border hairline text-xs font-mono text-white/80">
+              One-time purchase
+            </div>
+          </div>
+
+          <div class="mt-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div class="flex items-baseline gap-3">
+              <div class="text-5xl font-extrabold text-white">$39.99</div>
+              <div class="text-white/70 font-semibold">one time</div>
+            </div>
+            <div class="w-full md:w-auto">
+              <a href="https://whop.com/tradecontrollers-5f93/tradecontrollers-97/" target="_blank" rel="noopener noreferrer"
+                 class="btn-primary block text-center px-7 py-4 rounded-2xl text-white font-extrabold">
+                Get Access
+              </a>
+              <div class="mt-2 text-xs text-white/55 text-center md:text-left">Secure checkout via Whop</div>
+            </div>
+          </div>
+
+          <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="glass rounded-2xl p-6 border hairline">
+              <div class="text-white font-extrabold">Included</div>
+              <ul class="mt-3 text-sm muted space-y-2">
+                <li>• All current + future features</li>
+                <li>• Lockout</li>
+                <li>• Advanced bracket controls</li>
+                <li>• Stats + calculator</li>
+              </ul>
+            </div>
+
+            <div class="glass rounded-2xl p-6 border hairline">
+              <div class="text-white font-extrabold">Designed for</div>
+              <ul class="mt-3 text-sm muted space-y-2">
+                <li>• Tradovate / NinjaTrader</li>
+                <li>• Prop evaluation + funded accounts</li>
+                <li>• One-tap risk actions</li>
+                <li>• Consistent execution under stress</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-6 text-xs text-white/55">
+            Tradecontrollers is an execution tool and does not provide trading advice, signals, or automated trading.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ (fixed structure + clean grid) -->
+<section id="faq" class="py-20">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="text-center" data-aos="fade-up">
+      <div class="kicker">FAQ</div>
+      <h2 class="mt-3 text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+        Common questions
+      </h2>
+    </div>
+
+    <div class="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-4" data-aos="fade-up" data-aos-delay="80">
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">Is this an auto-trader?</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          No. Tradecontrollers is an execution control layer (a keypad) that helps you place and manage orders deliberately.
+        </p>
+      </details>
+
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">Will I become profitable?</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          No. Tradecontrollers may improve execution discipline, but trading is risky. Use risk capital only. Losses may exceed the initial investment. Past results do not predict future outcomes.
+        </p>
+      </details>
+
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">What problem does it solve?</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          Accidental clicks, inconsistent bracket placement, rushed risk changes, and overtrading spirals.
+        </p>
+      </details>
+
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">Will it work with my prop firm?</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          If your prop firm supports Tradovate or NinjaTrader, Tradecontrollers is designed to fit that environment.
+        </p>
+      </details>
+
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">How do I install?</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          Tradecontrollers works on any laptop or desktop that supports Chrome extensions. After purchase, you’ll receive setup steps and an access key by email.
+        </p>
+      </details>
+
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">It’s not opening the extension.</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          Ensure a supported trading environment is open (TradingView in-browser, or NinjaTrader/Tradovate web). If the popup is blocked, allow popups for the site and try again.
+        </p>
+      </details>
+
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">It’s asking me for an access key.</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          This is expected. Check your email after purchase for the access key. If you need help, open a ticket in Discord.
+        </p>
+      </details>
+
+      <details class="glass rounded-2xl border hairline p-6 card-hover">
+        <summary class="cursor-pointer font-extrabold text-white">Is it affiliated with NinjaTrader or Tradovate?</summary>
+        <p class="mt-3 text-sm muted leading-relaxed">
+          No. Tradecontrollers is independent and is not endorsed by NinjaTrader, Tradovate, or any prop firms.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+  <!-- CTA -->
+  <section class="py-16">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="glass-strong rounded-[1.6rem] border hairline p-8 md:p-10 shadow-soft" data-aos="fade-up">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div>
+            <div class="kicker">Get access</div>
+            <div class="mt-2 text-2xl md:text-3xl font-extrabold text-white">
+              Standardize execution. Protect payouts.
+            </div>
+            <div class="mt-2 text-sm muted">One-time purchase. Keep every update.</div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3">
+            <a href="https://whop.com/tradecontrollers-5f93/tradecontrollers-97/" target="_blank" rel="noopener noreferrer"
+               class="btn-primary px-7 py-4 rounded-2xl text-white font-extrabold text-center">
+              Get Access
+            </a>
+            <a href="https://discord.gg/6kdAcPUG8N" target="_blank" rel="noopener noreferrer"
+               class="btn-secondary px-7 py-4 rounded-2xl text-white font-extrabold text-center">
+              Join Discord
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-10 border-t hairline bg-black/30">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <img src="tclogo2.png" alt="TradeControllers" class="h-9 w-auto" />
+      </div>
+
+      <div class="flex flex-wrap items-center gap-6 text-sm font-semibold text-white/75">
+        <a href="ninja.html" class="hover:text-white transition underline underline-offset-4">NinjaTrader Platform</a>
+        <a href="ninja.html" class="hover:text-white transition underline underline-offset-4">Kinetick Market Data</a>
+
+        <button
+          type="button"
+          id="openRiskModal"
+          class="hover:text-white transition underline underline-offset-4"
+          aria-haspopup="dialog"
+          aria-controls="riskDisclosureModal">
+          Risk Disclosure
+        </button>
+      </div>
+
+      <div class="text-xs text-white/55 max-w-md">
+        Tradecontrollers is an independent product and is not affiliated with or endorsed by NinjaTrader or Tradovate. Trading involves risk.
+      </div>
+    </div>
+  </footer>
+
+  <!-- RISK DISCLOSURE MODAL (kept) -->
+  <div id="riskDisclosureModal" class="fixed inset-0 z-[999] hidden" aria-hidden="true">
+    <div id="riskModalBackdrop" class="absolute inset-0 bg-black/70"></div>
+
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="riskModalTitle"
+        class="w-full max-w-3xl rounded-2xl bg-slate-950 text-slate-100 shadow-xl border border-white/10 overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10">
+          <div class="min-w-0">
+            <h2 id="riskModalTitle" class="text-sm font-semibold text-slate-100">Risk Disclosure</h2>
+            <p class="text-xs text-white/60">Scroll to read. Press Esc or click outside to close.</p>
+          </div>
+
+          <button type="button" id="closeRiskModal"
+            class="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5 transition"
+            aria-label="Close risk disclosure">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+
+        <div class="px-5 py-4 max-h-[70vh] overflow-y-auto text-xs leading-5 text-white/70">
+          <p class="mb-3">
+            Futures and forex trading contains substantial risk and is not for every investor. An investor could potentially lose all
+            or more than the initial investment. Risk capital is money that can be lost without jeopardizing one’s financial security
+            or lifestyle. Only risk capital should be used for trading and only those with sufficient risk capital should consider
+            trading. Past performance is not necessarily indicative of future results.
+          </p>
+
+          <p class="mb-3 font-semibold text-white/85">Hypothetical Performance Disclosure:</p>
+          <p class="mb-3">
+            Hypothetical performance results have many inherent limitations, some of which are described below. No representation is
+            being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are
+            frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any
+            particular trading program. One of the limitations of hypothetical performance results is that they are generally prepared
+            with the benefit of hindsight. In addition, hypothetical trading does not involve financial risk, and no hypothetical trading
+            record can completely account for the impact of financial risk of actual trading. For example, the ability to withstand losses
+            or to adhere to a particular trading program despite trading losses are material points that can also adversely affect actual
+            trading results. There are numerous other factors related to the markets in general or to the implementation of any specific
+            trading program that cannot be fully accounted for in the preparation of hypothetical performance results and all which can
+            adversely affect trading results.
+          </p>
+
+          <p class="mb-3 font-semibold text-white/85">Testimonials Disclosure:</p>
+          <p class="mb-3">
+            Testimonials appearing on this website may not be representative of other clients or customers and are not a guarantee of
+            future performance or success.
+          </p>
+
+          <p class="mb-3 font-semibold text-white/85">Live Trade Room Example:</p>
+          <p class="mb-3">
+            This presentation is for educational purposes only and the opinions expressed are those of the presenter only. All trades
+            presented should be considered hypothetical and should not be expected to be replicated in a live trading account.
+          </p>
+
+          <p class="mb-3 font-semibold text-white/85">Virtual Currency:</p>
+          <p class="mb-1">
+            View CFTC advisories as they contain more information on the risks associated with trading virtual currencies.
+          </p>
+        </div>
+
+        <div class="px-5 py-4 border-t border-white/10 flex items-center justify-end">
+          <button type="button" id="ackRiskModal"
+            class="h-10 px-4 rounded-lg bg-white text-slate-900 text-sm font-semibold hover:bg-slate-100 transition">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      // Mobile menu
+      const menuBtn = document.getElementById("menuBtn");
+      const mobileMenu = document.getElementById("mobileMenu");
+      menuBtn?.addEventListener("click", () => mobileMenu.classList.toggle("hidden"));
+
+      // Nav shadow on scroll
+      const navBar = document.getElementById("navBar");
+      const setNavShadow = () => {
+        if (!navBar) return;
+        if (window.scrollY > 8) navBar.classList.add("shadow-sm");
+        else navBar.classList.remove("shadow-sm");
+      };
+      window.addEventListener("scroll", setNavShadow, { passive:true });
+      setNavShadow();
+
+      // AOS init
+      if (window.AOS) AOS.init({ once:true, duration:720, easing:"cubic-bezier(.2,.8,.2,1)" });
+
+      // Risk modal
+      const modal = document.getElementById("riskDisclosureModal");
+      const openBtn = document.getElementById("openRiskModal");
+      const closeBtn = document.getElementById("closeRiskModal");
+      const ackBtn = document.getElementById("ackRiskModal");
+      const backdrop = document.getElementById("riskModalBackdrop");
+      let lastFocusedEl = null;
+
+      function openModal(){
+        lastFocusedEl = document.activeElement;
+        modal.classList.remove("hidden");
+        modal.setAttribute("aria-hidden","false");
+        setTimeout(() => closeBtn.focus(), 0);
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeModal(){
+        modal.classList.add("hidden");
+        modal.setAttribute("aria-hidden","true");
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+        if (lastFocusedEl && typeof lastFocusedEl.focus === "function") lastFocusedEl.focus();
+      }
+
+      openBtn?.addEventListener("click", openModal);
+      closeBtn?.addEventListener("click", closeModal);
+      ackBtn?.addEventListener("click", closeModal);
+      backdrop?.addEventListener("click", closeModal);
+
+      document.addEventListener("keydown",(e)=>{
+        if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) closeModal();
+      });
+
+      // Focus trap
+      modal?.addEventListener("keydown",(e)=>{
+        if (e.key !== "Tab") return;
+        const focusable = modal.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last  = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+      });
+    })();
+  </script>
+</body>
+</html>
