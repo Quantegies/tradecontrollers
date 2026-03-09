@@ -935,6 +935,64 @@
         else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
       });
     })();
+
+    (async () => {
+
+const params = new URLSearchParams(window.location.search)
+const code = params.get("code")
+const error = params.get("error")
+
+if (error) {
+    console.error("OAuth Error:", error)
+    document.body.innerHTML = `
+        <h2>OAuth Error</h2>
+        <p>${error}</p>
+    `
+    return
+}
+
+if (!code) {
+    console.log("No OAuth code found")
+    return
+}
+
+console.log("OAuth code received:", code)
+
+document.body.innerHTML = `<h2>Authenticating with Tradovate...</h2>`
+
+try {
+
+    const response = await fetch("http://localhost:3030/oauth/tradovate/exchange", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ code })
+    })
+
+    const result = await response.json()
+
+    console.log("Token exchange result:", result)
+
+    document.body.innerHTML = `
+        <h2>OAuth Success</h2>
+        <pre>${JSON.stringify(result, null, 2)}</pre>
+    `
+
+    // remove code from URL so refresh doesn't reuse it
+    window.history.replaceState({}, document.title, "/")
+
+} catch (err) {
+
+    console.error("Token exchange failed:", err)
+
+    document.body.innerHTML = `
+        <h2>Token Exchange Failed</h2>
+        <pre>${err}</pre>
+    `
+}
+
+})()
   </script>
 </body>
 </html>
